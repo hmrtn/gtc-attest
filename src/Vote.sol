@@ -15,7 +15,8 @@ abstract contract IVote {
     ATTESTER = attester;
   }
   
-  function vote(bytes[] calldata _votes) external virtual;
+  function vote(bytes[] calldata _votes) external virtual payable;
+
 }
 
 contract Vote is IVote {
@@ -23,7 +24,7 @@ contract Vote is IVote {
   constructor(address attester, Attestator attestator, string memory name) IVote(attester, attestator, name) {}
 
 
-  function vote(bytes[] memory _votes) external override {
+  function vote(bytes[] memory _votes) external override payable {
 
     // Additional Vote logic
 

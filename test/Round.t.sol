@@ -41,19 +41,19 @@ contract Round_Init is Test {
     function _initializeContracts() internal {
         attestator = new Attestator();
         program = new Program(alice, attestator);
-        round = new Round(alice, attestator);
+        round = new Round(alice, attestator, "round-contract1");
         vote = new Vote(alice, attestator, "vote-contract-1");
     }
 
     function attestRoundOperator(address about) public {
       vm.prank(alice);
       attestator.attest(
-        { _about: about, _key: bytes32("round.is_operator"), _val: bytes("true") }
+        { _about: about, _key: bytes32("round.is_admin"), _val: bytes("true") }
       );
     }
 
-    function setVotingContract(address votingContract) public {
-      round.updateVotingContract(votingContract);
+    function setVoteContract(address votingContract) public {
+      round.updateVoteContract(votingContract);
     }
 
 }
@@ -134,7 +134,7 @@ contract RoundTest is Round_Init {
   function testsubmitVote() public {
     attestRoundOperator(bob);
     vm.prank(bob);
-    setVotingContract(address(vote)); 
+    setVoteContract(address(vote)); 
 
     // create votes data
     bytes[] memory voteData1 = new bytes[](2);

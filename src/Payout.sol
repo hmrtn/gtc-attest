@@ -16,6 +16,7 @@ abstract contract IPayout {
   }
   
   function payout(bytes[] calldata _data) external virtual payable;
+
 }
 
 contract Payout is IPayout {

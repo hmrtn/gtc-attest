@@ -1,8 +1,9 @@
 pragma solidity 0.8.18;
 
 import { Attestator } from "./Attestator.sol";
+import { Round } from "./Round.sol";
 
-contract Program {
+abstract contract IProgram {
   Attestator public immutable ATTESTATOR;
   address public immutable ATTESTER;
   constructor(
@@ -19,10 +20,18 @@ contract Program {
   }
 
   function updateProgramAttestation(bytes32 _key, bytes memory _value) public onlyProgramAdmin {
-    // require the admin attestation
     ATTESTATOR.attest(
       { _about: address(this), _key: _key, _val: _value }
     );
   }
 
+}
+
+contract Program is IProgram {
+  constructor(
+    address _attester, 
+    Attestator _attestator
+  ) IProgram(_attester, _attestator) {
+    // additional program logic
+  }
 }
