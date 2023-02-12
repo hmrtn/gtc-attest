@@ -2,13 +2,13 @@
 pragma solidity ^0.8.18;
 
 import "../src/Attestator.sol";
+import {IVote} from "../src/Vote.sol";
+import {IPayout} from "../src/Payout.sol";
 
 contract Round {
   
   Attestator public immutable ATTESTATOR;
   address public immutable ATTESTER;
-
-  address public token;
 
   constructor(
     address _attester, 
@@ -23,32 +23,45 @@ contract Round {
     _;
   }
 
+  function updateRoundAttestation(bytes32 _key, bytes memory _value) public onlyRoundOperator {
+    ATTESTATOR.attest(
+      { _about: address(this), _key: _key, _val: _value }
+    );
+  }
+  
   function updateToken(address _token) public onlyRoundOperator {
     ATTESTATOR.attest(
-      { _about: address(this), _key: bytes32("round.token"), _val: abi.encodePacked(_token) }
-    );
-    token = _token;
-  }
-
-  function updateRoundAttestation(bytes32 _key, string memory _value) public onlyRoundOperator {
-    ATTESTATOR.attest(
-      { _about: address(this), _key: _key, _val: abi.encodePacked(_value) }
+      { _about: address(this), _key: bytes32("round.token"), _val: abi.encode(_token) }
     );
   }
 
-  function finalize(bytes[] memory _value) public onlyRoundOperator {
-    // finalize logic
-
+  function updateVotingContract(address _votingContract) public onlyRoundOperator {
     ATTESTATOR.attest(
-      { _about: address(this), _key: bytes32("round.finalized"), _val: abi.encode(_value) }
+      { _about: address(this), _key: bytes32("round.voting_contract"), _val: abi.encode(_votingContract) }
     );
   }
 
-  function payout(bytes[] memory _value) public onlyRoundOperator {
-    // Payout logic
+  function updatePayoutContract(address _payoutContract) public onlyRoundOperator {
+    ATTESTATOR.attest(
+      { _about: address(this), _key: bytes32("round.payout_contract"), _val: abi.encode(_payoutContract) }
+    );
+  }
+
+  function submitPayout(bytes[] memory _data) public onlyRoundOperator {
+    require(
+      ATTESTATOR.attestations(ATTESTER, address(this), bytes32("round.payout_contract")).length > 0, 
+      "Round::submitPayout: NO_PAYOUT_CONTRACT"
+    );
+
+    address payoutContract = abi.decode(
+      ATTESTATOR.attestations(ATTESTER, address(this), bytes32("round.payout_contract")), 
+      (address)
+    );
+
+    IPayout(payoutContract).payout(_data);
 
     ATTESTATOR.attest(
-      { _about: address(this), _key: bytes32("round.paid"), _val: abi.encode(_value) }
+      { _about: address(payoutContract), _key: bytes32("round.paid"), _val: abi.encode(_data) }
     );
   }
 
@@ -58,12 +71,26 @@ contract Round {
     );
   }
 
-  function vote(bytes[] memory _votes) public payable {
-    // Vote logic
+  function submitVotes(
+    bytes[] memory _votes
+  ) public payable {
+    require(
+      ATTESTATOR.attestations(address(this), address(this), bytes32("round.voting_contract")).length > 0,
+      "Round::submitVote: VOTING_CONTRACT_NOT_SET"
+    );
+    // decode packed voting contract address
+    address votingContract = abi.decode(
+      ATTESTATOR.attestations(address(this), address(this), bytes32("round.voting_contract")),
+      (address)
+    );
+
+    IVote(votingContract).vote(_votes);
 
     ATTESTATOR.attest(
-      { _about: msg.sender, _key: bytes32("round.vote"), _val: abi.encode(_votes) }
+      { _about: votingContract, _key: bytes32(uint256(uint160(msg.sender))), _val: abi.encode(_votes) }
     );
+
   }
+
   
 }

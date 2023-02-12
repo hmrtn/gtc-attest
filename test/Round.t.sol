@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 import "../src/Round.sol";
 import "../src/Program.sol";
 import "../src/Attestator.sol";
+import "../src/Vote.sol";
 
 import "forge-std/console.sol";
 
@@ -13,12 +14,14 @@ contract Round_Init is Test {
   
     Program public program;
     Round public round;
+    Vote public vote;
     Attestator public attestator;
 
     address alice = address(128);
     address bob = address(256);
     address carol = address(512);
     address sally = address(1024);
+    address dave = address(2048);
 
 
     function setUp() public {
@@ -26,10 +29,12 @@ contract Round_Init is Test {
         vm.deal(alice, 1 ether);
         vm.deal(bob, 1 ether);
         vm.deal(sally, 1 ether);
+        vm.deal(dave, 1 ether);
 
         vm.label(alice, "alice");
         vm.label(bob, "bob");
         vm.label(sally, "sally");
+        vm.label(dave, "dave");
         _initializeContracts();
     }
 
@@ -37,6 +42,7 @@ contract Round_Init is Test {
         attestator = new Attestator();
         program = new Program(alice, attestator);
         round = new Round(alice, attestator);
+        vote = new Vote(alice, attestator, "vote-contract-1");
     }
 
     function attestRoundOperator(address about) public {
@@ -44,6 +50,10 @@ contract Round_Init is Test {
       attestator.attest(
         { _about: about, _key: bytes32("round.is_operator"), _val: bytes("true") }
       );
+    }
+
+    function setVotingContract(address votingContract) public {
+      round.updateVotingContract(votingContract);
     }
 
 }
@@ -56,6 +66,8 @@ contract RoundTest is Round_Init {
     assertEq(address(program.ATTESTER()), alice);
     assertEq(address(round.ATTESTATOR()), address(attestator));
     assertEq(address(round.ATTESTER()), alice);
+    assertEq(address(vote.ATTESTATOR()), address(attestator));
+    assertEq(address(vote.ATTESTER()), alice);
   }
 
   function testUpdateRoundMetaPtr() public {
@@ -119,33 +131,65 @@ contract RoundTest is Round_Init {
     assertEq(attestator.attestations(address(round), bob, bytes32("round.application")), bytes(""));
   }
 
-  function testVote() public {
-
-    // encode arbitrary vote data from bob for carol and sally
-    bytes[] memory votes = new bytes[](2);
-    votes[0] = abi.encodePacked(
-      bob, 
-      sally,
-      bytes32("sally-votes")
-    );
-    
-    votes[1] = abi.encodePacked(
-      bob,
-      carol, 
-      bytes32("carol-votes")
-    );
-
+  function testsubmitVote() public {
+    attestRoundOperator(bob);
     vm.prank(bob);
-    round.vote(votes);
+    setVotingContract(address(vote)); 
+
+    // create votes data
+    bytes[] memory voteData1 = new bytes[](2);
+    voteData1[0] = abi.encodePacked(bytes32("test-project-a"), uint256(420));     
+    voteData1[1] = abi.encodePacked(bytes32("test-project-b"), uint256(69));
+
+    bytes[] memory voteData2 = new bytes[](2);
+    voteData2[0] = abi.encodePacked(bytes32("test-project-a"), uint256(77));
+    voteData2[1] = abi.encodePacked(bytes32("test-project-z"), uint256(88));
+
+    vm.prank(dave);
+    round.submitVotes(voteData1);
+
+    vm.prank(sally);
+    round.submitVotes(voteData2);
 
     // check that the votes are stored
-    assertEq(attestator.attestations(address(round), bob, bytes32("round.vote")), abi.encode(votes));
-    bytes[] memory decoded_votes = abi.decode(attestator.attestations(address(round), bob, bytes32("round.vote")), (bytes[]));
-    assertEq(decoded_votes[0], votes[0]);
-    assertEq(decoded_votes[1], votes[1]);
+    assertEq(
+      attestator.attestations(address(round), address(vote), bytes32(uint256(uint160(dave)))), 
+      abi.encode(voteData1)
+    ); 
 
-    // check non votes from random address
-    assertEq(attestator.attestations(address(round), address(69), bytes32("round.vote")), bytes(""));
+    assertEq(
+      attestator.attestations(address(round), address(vote), bytes32(uint256(uint160(sally)))), 
+      abi.encode(voteData2)
+    );
+
+    // decode daves votes
+    bytes[] memory decodedDaveVotes = abi.decode(
+      attestator.attestations(address(round), address(vote), bytes32(uint256(uint160(dave)))), 
+      (bytes[])
+    );
+    (bytes32 daveProjectVote1, uint256 daveProjectWeight1) = abi.decode(decodedDaveVotes[0], (bytes32, uint256));
+    (bytes32 daveProjectVote2, uint256 daveProjectWeight2) = abi.decode(decodedDaveVotes[1], (bytes32, uint256));
+
+    assertEq(daveProjectVote1, bytes32("test-project-a"));
+    assertEq(daveProjectWeight1, uint256(420));
+
+    assertEq(daveProjectVote2, bytes32("test-project-b"));
+    assertEq(daveProjectWeight2, uint256(69));
+
+    // decode sallys votes
+    bytes[] memory decodedSallyVotes = abi.decode(
+      attestator.attestations(address(round), address(vote), bytes32(uint256(uint160(sally)))), 
+      (bytes[])
+    );
+    (bytes32 sallyProjectVote1, uint256 sallyProjectWeight1) = abi.decode(decodedSallyVotes[0], (bytes32, uint256));
+    (bytes32 sallyProjectVote2, uint256 sallyProjectWeight2) = abi.decode(decodedSallyVotes[1], (bytes32, uint256));
+
+    assertEq(sallyProjectVote1, bytes32("test-project-a"));
+    assertEq(sallyProjectWeight1, uint256(77));
+
+    assertEq(sallyProjectVote2, bytes32("test-project-z"));
+    assertEq(sallyProjectWeight2, uint256(88));
+
   }
 
 
