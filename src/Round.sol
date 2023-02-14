@@ -9,11 +9,9 @@ abstract contract IRound {
 
   Attestator public ATTESTATOR;
   address public ATTESTER;
-  string public NAME;
 
-  constructor(address attester, Attestator attestator, string memory name) {
+  constructor(address attester, Attestator attestator) {
     ATTESTATOR = attestator;
-    NAME = name;
     ATTESTER = attester;
   }
 
@@ -35,7 +33,7 @@ abstract contract IRound {
 
 contract Round is IRound {
 
-  constructor(address attester, Attestator attestator, string memory name) IRound(attester, attestator, name) {}
+  constructor(address attester, Attestator attestator) IRound(attester, attestator) {}
 
   function updateRoundToken(address _token) external {
     updateRoundAttestation(bytes32("round.contract.token"), abi.encode(_token));
@@ -67,9 +65,9 @@ contract Round is IRound {
 
     IPayout(payoutContract).payout{value: msg.value}(_data);
 
-    ATTESTATOR.attest(
-      { _about: address(payoutContract), _key: bytes32("round.paid"), _val: abi.encode(_data) }
-    );
+    // ATTESTATOR.attest(
+    //   { _about: address(payoutContract), _key: bytes32("round.paid"), _val: abi.encode(_data) }
+    // );
   }
 
   function submitVotes(bytes[] memory _votes) external override payable {

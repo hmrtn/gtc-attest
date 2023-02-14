@@ -14,9 +14,9 @@ contract DeployScript is Script {
         vm.startBroadcast();
         Attestator attestator = new Attestator();
         Program program = new Program(address(0x128), attestator);
-        Round round = new Round(address(0x128), attestator, "round-contract1");
-        Vote vote = new Vote(address(0x128), attestator, "vote-contract-1");
-        Payout payout = new Payout(address(0x128), attestator, "payout-contract-1");
+        Round round = new Round(address(0x128), attestator);
+        Vote vote = new Vote(address(0x128), attestator);
+        Payout payout = new Payout(address(0x128), attestator);
         vm.stopBroadcast();
 
     }

@@ -7,11 +7,9 @@ abstract contract IVote {
 
   Attestator public ATTESTATOR;
   address public ATTESTER;
-  string public NAME;
 
-  constructor(address attester, Attestator attestator, string memory name) {
+  constructor(address attester, Attestator attestator) {
     ATTESTATOR = attestator;
-    NAME = name;
     ATTESTER = attester;
   }
   
@@ -21,7 +19,7 @@ abstract contract IVote {
 
 contract Vote is IVote {
 
-  constructor(address attester, Attestator attestator, string memory name) IVote(attester, attestator, name) {}
+  constructor(address attester, Attestator attestator) IVote(attester, attestator) {}
 
 
   function vote(bytes[] memory _votes) external override payable {

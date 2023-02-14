@@ -7,11 +7,9 @@ abstract contract IPayout {
 
   Attestator public ATTESTATOR;
   address public ATTESTER;
-  string public NAME;
 
-  constructor(address attester, Attestator attestator, string memory name) {
+  constructor(address attester, Attestator attestator) {
     ATTESTATOR = attestator;
-    NAME = name;
     ATTESTER = attester;
   }
   
@@ -21,7 +19,7 @@ abstract contract IPayout {
 
 contract Payout is IPayout {
 
-  constructor(address attester, Attestator attestator, string memory name) IPayout(attester, attestator, name) {}
+  constructor(address attester, Attestator attestator) IPayout(attester, attestator) {}
 
   function payout(bytes[] memory _data) external override payable{
 

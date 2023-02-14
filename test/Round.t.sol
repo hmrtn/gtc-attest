@@ -41,8 +41,8 @@ contract Round_Init is Test {
     function _initializeContracts() internal {
         attestator = new Attestator();
         program = new Program(alice, attestator);
-        round = new Round(alice, attestator, "round-contract1");
-        vote = new Vote(alice, attestator, "vote-contract-1");
+        round = new Round(alice, attestator);
+        vote = new Vote(alice, attestator);
     }
 
     function attestRoundOperator(address about) public {
